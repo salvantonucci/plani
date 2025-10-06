@@ -11,8 +11,8 @@
   <!-- Dynamic favicon that follows our theme toggle -->
   <link id="dyn-favicon" rel="icon" href="logo-claro.ico">
   <script>
-    const isProd = window.location.hostname === 'plani.vercel.app';
-    const imgBase = isProd ? 'https://plani.vercel.app/' : '';
+    const isProd = window.location.hostname === 'plani-ruby.vercel.app';
+    const imgBase = isProd ? 'https://plani-ruby.vercel.app/' : '';
     document.querySelectorAll('link[rel="icon"]').forEach(link => {
       link.href = imgBase + link.href;
     });
@@ -439,9 +439,9 @@
   <script>
 
     // Environment config
-    const isProduction = window.location.hostname === 'plani.vercel.app';
-    const BASE_URL = isProduction ? 'https://plani.vercel.app' : 'http://localhost:5000';
-    const IMAGE_BASE = isProduction ? 'https://plani.vercel.app/' : '';
+    const isProduction = window.location.hostname === 'plani-ruby.vercel.app';
+    const BASE_URL = isProduction ? 'https://plani-ruby.vercel.app' : 'http://localhost:5000';
+    const IMAGE_BASE = isProduction ? 'https://plani-ruby.vercel.app/' : '';
 
     (function(){
       const dyn = document.getElementById('dyn-favicon');
