@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plani 🚀 Weather & Cosmos</title>
+
+  <!-- Favicons by system scheme (fallback) -->
+  <link rel="icon" href="logo-claro.ico"  media="(prefers-color-scheme: light)">
+  <link rel="icon" href="logo-oscuro.ico" media="(prefers-color-scheme: dark)">
+  <!-- Dynamic favicon that follows our theme toggle -->
+  <link id="dyn-favicon" rel="icon" href="logo-claro.ico">
+  <script>
+    const isProd = window.location.hostname === 'plani.vercel.app';
+    const imgBase = isProd ? 'https://plani.vercel.app/' : '';
+    document.querySelectorAll('link[rel="icon"]').forEach(link => {
+      link.href = imgBase + link.href;
+    });
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      /* Cosmic palette (dark theme base) */
+      --space-0:#060B1A; --space-1:#0B1226; --space-2:#0E1633;
+      --aurora-1:#39B4FF; --aurora-2:#6A5BFF; --aurora-3:#65F4FF;
+      --ink:#E6ECFF; --muted:#A9B4D0; --line:rgba(12,26,69,.08);
+      --card:#0F1A2E; --chip:#131F3A;
+      --ok:#10B981; --warn:#F59E0B; --info:#60A5FA;
+      --rad:18px; --shadow:0 24px 60px rgba(0,0,0,.35);
+
+      /* === Default logo (dark) === */
+      --plani-logo: url('logo-oscuro.png');
+    }
+    /* === LIGHT THEME === */
+    [data-theme="light"]{
+      --ink:#0F172A; --muted:#667085; --line:rgba(15,23,42,.08);
+      --card:#FFFFFF; --chip:#F2F6FF;
+      --space-1:#F7FAFF; --space-2:#EFF5FF;
+
+      /* Logo for light theme */
+      --plani-logo: url('logo-claro.png');
+    }
+    [data-theme="light"] body{
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(106,91,255,.08), transparent),
+        radial-gradient(900px 900px at 80% 20%, rgba(57,180,255,.08), transparent),
+        linear-gradient(180deg,var(--space-1),var(--space-2));
+    }
+    /* subtle tweaks on light */
+    [data-theme="light"] .ghost-btn:hover{ background:#EEF3FF; }
+    [data-theme="light"] .stat{ background:#F2F6FF; }
+    [data-theme="light"] .meter{ background:#EEF3FF; }
+    [data-theme="light"] .tabs button{ background:#EEF3FF; }
+
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+    html,body{height:100%}
+    body{
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(106,91,255,.16), transparent),
+        radial-gradient(900px 900px at 80% 20%, rgba(57,180,255,.14), transparent),
+        linear-gradient(180deg,var(--space-1),var(--space-2));
+      color:var(--ink); overflow-x:hidden;
+    }
+
+    /* Background: stars + winds (two canvases) */
+    canvas.bg{position:fixed;inset:0;z-index:-2;filter:contrast(1.05)}
+    canvas.wind{position:fixed;inset:0;z-index:-1;opacity:.35}
+
+    .page{min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}
+    .wrap{width:min(1180px,92vw);margin:0 auto}
+
+    /* NAV */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em}
+    .badge{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid var(--line);color:#8AB4FF}
+    .ghost-btn,.link-btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;text-decoration:none;cursor:pointer}
+    .ghost-btn{padding:9px 14px;border:1px solid var(--line);color:var(--ink);background:transparent}
+    .ghost-btn:hover{background:#0d1a34}
+    .link-btn{padding:10px 16px;color:#031022;border:1px solid transparent;background:linear-gradient(135deg,var(--aurora-1),var(--aurora-2)); box-shadow:0 16px 28px rgba(100,116,255,.24)}
+
+    /* === Logo next to the name (changes with theme) === */
+    .brand-logo{
+      width:28px; height:28px; border-radius:8px;
+      background: var(--plani-logo) center/contain no-repeat;
+      display:inline-block; box-shadow:0 6px 14px rgba(0,0,0,.15);
+    }
+
+    /* HERO */
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center;padding:8px 0 18px}
+    .hero h1{font-size:clamp(36px,5.6vw,64px);line-height:1.04;font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+    .hero p{font-size:clamp(15px,1.4vw,18px);color:var(--muted);margin-bottom:22px}
+    .cta{display:flex;gap:12px;flex-wrap:wrap}
+
+    .final-gradient{
+      background: linear-gradient(90deg, var(--aurora-1), var(--aurora-2));
+      -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    }
+
+    /* Hologram planet */
+    .holo{position:relative;border-radius:22px;background:radial-gradient(120% 120% at 70% 30%, rgba(106,91,255,.16), transparent 60%), linear-gradient(180deg,#0c162a,#0a1223);
+      border:1px solid var(--line);box-shadow:var(--shadow);padding:14px;overflow:hidden;min-height:320px}
+    .holo .chrome{display:flex;gap:8px;margin-bottom:10px}
+    .dot{width:10px;height:10px;border-radius:999px;background:#1e293b}
+    .sphere{position:relative;height:320px;border-radius:18px;overflow:hidden}
+    .sphere canvas{position:absolute;inset:0}
+
+    /* Feature chips */
+    .features{margin-top:26px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;justify-items:stretch}
+    .feat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 16px 14px;box-shadow:0 24px 54px rgba(0,0,0,.20)}
+    .feat h3{font-size:15px;margin:6px 0 4px}
+    .feat p{color:var(--muted);font-size:13px}
+    .icon{width:22px;height:22px;display:inline-grid;place-items:center;border-radius:6px;background:rgba(106,91,255,.18);border:1px solid var(--line)}
+
+    /* Centered stage with equal-width panels */
+    .stage{margin:34px auto 8px;max-width:1100px;display:grid;grid-template-columns:repeat(2,minmax(320px,1fr));gap:18px;justify-content:center}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+    .card h3{font-size:16px;margin-bottom:8px}
+
+    .row{display:grid;grid-template-columns:160px 1fr auto;gap:12px;align-items:center;margin:10px 0}
+    .row label{font-size:13px;color:var(--muted)}
+    input[type="range"]{accent-color:#67a0ff}
+    .pill{display:inline-flex;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px;background:#0b1730}
+    .pill button{border:0;background:transparent;padding:6px 10px;border-radius:999px;cursor:pointer;color:var(--muted)}
+    .pill button.active{background:linear-gradient(135deg,var(--aurora-1),var(--aurora-2));color:#051128;font-weight:700}
+
+    .meter{height:10px;background:#0b1730;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .meter>i{display:block;height:100%;width:30%;background:linear-gradient(90deg,var(--aurora-1),var(--aurora-2))}
+    .hint{font-size:12px;color:var(--muted)}
+
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+    .stat{background:#0b1730;border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}
+    .stat .n{font-weight:800;font-size:22px}
+    .stat .t{font-size:12px;color:var(--muted)}
+
+    /* Tabs */
+    .tabs{display:flex;gap:8px;margin:6px 0 12px}
+    .tabs button{border:1px solid var(--line);background:#0b1730;color:var(--ink);padding:8px 12px;border-radius:10px;cursor:pointer}
+    .tabs button.active{background:linear-gradient(135deg,var(--aurora-1),var(--aurora-2));color:#031022;border-color:transparent}
+    .tabcontent{display:none}
+    .tabcontent.active{display:block}
+
+    /* Steps (beacon style) */
+    .steps{margin:28px auto 10px;max-width:1100px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .step{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;position:relative}
+    .num{position:absolute;top:-14px;left:-14px;width:28px;height:28px;display:grid;place-items:center;background:linear-gradient(135deg,var(--aurora-1),var(--aurora-2));color:#051128;font-weight:800;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.32);font-size:13px}
+    .step p{color:var(--muted);font-size:13px;margin-top:8px}
+
+    /* FAQ */
+    .faq{margin:18px auto;max-width:1100px}
+    details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+    summary{cursor:pointer;font-weight:600}
+    details p{color:var(--muted);margin-top:8px;font-size:14px}
+
+    footer{color:#9FB0D6;font-size:13px;padding:18px 0;text-align:center}
+
+    .reveal{opacity:0;transform:translateY(12px);transition:opacity .5s ease, transform .5s ease}
+    .reveal.show{opacity:1;transform:none}
+
+    @media (max-width: 1080px){
+      .hero{grid-template-columns:1fr;gap:22px}
+      .sphere{height:280px}
+      .features{grid-template-columns:repeat(2,1fr)}
+      .stage{grid-template-columns:1fr}
+      .steps{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <canvas class="bg" id="stars" aria-hidden="true"></canvas>
+  <canvas class="wind" id="wind" aria-hidden="true"></canvas>
+
+  <main class="page">
+    <div class="wrap">
+      <nav class="nav">
+        <div class="brand" aria-label="Plani, powered by NASA">
+          <!-- Logo that changes with theme -->
+          <span class="brand-logo" role="img" aria-label="Plani logo"></span>
+          <span>Plani</span>
+          <span class="badge">POWERED BY NASA</span>
+        </div>
+        <div class="nav-actions">
+          <button id="themeToggle" class="ghost-btn" aria-label="Toggle theme">🌓 Theme</button>
+          <a class="link-btn" href="map.html" aria-label="Open the map">Open map →</a>
+        </div>
+      </nav>
+    </div>
+
+    <section class="wrap hero">
+      <div class="reveal">
+        <h1>Explore the <span class="final-gradient">future weather</span> with a space twist</h1>
+        <p>Plani combines historical series, regional climatology, and HUD-style visuals to help you decide up to <strong>one year</strong> in advance.</p>
+        <div class="cta">
+          <a class="link-btn" href="map.html">Use the map now</a>
+        </div>
+      </div>
+
+      <div class="holo reveal" role="img" aria-label="Holographic globe with wind paths">
+        <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+        <div class="sphere">
+          <canvas id="sphereCanvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature chips -->
+    <section class="wrap">
+      <div class="features">
+        <div class="feat reveal"><div class="icon">🗺️</div><h3>Interactive map</h3><p>Drop a point and adjust the radius.</p></div>
+        <div class="feat reveal"><div class="icon">📅</div><h3>Up to one year</h3><p>Pick a start date and lead time.</p></div>
+        <div class="feat reveal"><div class="icon">📊</div><h3>Climate HUD</h3><p>Probabilities with cockpit-style bars.</p></div>
+        <div class="feat reveal"><div class="icon">🛰️</div><h3>NASA data</h3><p>Consistent and traceable.</p></div>
+        <div class="feat reveal"><div class="icon">🌬️</div><h3>Winds</h3><p>Animated isobars (demo).</p></div>
+        <div class="feat reveal"><div class="icon">🧠</div><h3>Recommendations</h3><p>What to do/avoid by week.</p></div>
+      </div>
+    </section>
+
+    <!-- Centered stage -->
+    <section class="stage" aria-label="Interactive panels">
+      <div class="card reveal" id="simulador">
+        <h3>Visual simulator</h3>
+        <p class="hint">Tweak the sliders and watch the HUD react. It’s a demo; it won’t change your map.</p>
+        <div class="row">
+          <label for="rngRadio">Radius (km)</label>
+          <input id="rngRadio" type="range" min="5" max="200" value="30" />
+          <span id="outRadio" aria-live="polite">30 km</span>
+        </div>
+        <div class="row">
+          <label for="rngAnt">Lead time</label>
+          <input id="rngAnt" type="range" min="1" max="52" value="4" />
+          <span id="outAnt" aria-live="polite">4 weeks</span>
+        </div>
+        <div class="row">
+          <label>Units</label>
+          <div class="pill" role="tablist" aria-label="Units">
+            <button id="uC" class="active" aria-selected="true">°C</button>
+            <button id="uF" aria-selected="false">°F</button>
+          </div>
+          <span></span>
+        </div>
+        <div class="row">
+          <label>Rain prob.</label>
+          <div class="meter" style="flex:1"><i id="mLluvia" style="width:34%"></i></div>
+          <span class="hint" id="vLluvia">34%</span>
+        </div>
+        <div class="row">
+          <label>Wind</label>
+          <div class="meter" style="flex:1"><i id="mViento" style="width:52%"></i></div>
+          <span class="hint" id="vViento">52%</span>
+        </div>
+        <div class="row">
+          <label>Radiation</label>
+          <div class="meter" style="flex:1"><i id="mRad" style="width:62%"></i></div>
+          <span class="hint" id="vRad">62%</span>
+        </div>
+        <div class="stats" aria-label="Indicators">
+          <div class="stat"><div class="n" data-count="8760">0</div><div class="t">Projectable hours</div></div>
+          <div class="stat"><div class="n" data-count="5">0</div><div class="t">Base variables</div></div>
+          <div class="stat"><div class="n" data-count="1">0</div><div class="t">Key button</div></div>
+        </div>
+      </div>
+
+      <div class="card reveal help">
+        <h3>Help center</h3>
+        <div class="tabs" role="tablist">
+          <button class="active" data-tab="tab1" aria-selected="true">Concepts</button>
+          <button data-tab="tab2" aria-selected="false">Best practices</button>
+          <button data-tab="tab3" aria-selected="false">Limitations</button>
+        </div>
+        <div id="tab1" class="tabcontent active" role="region" aria-live="polite">
+          <ul class="hint">
+            <li>Works with <strong>probability ranges</strong>, not point-by-point certainty.</li>
+            <li>Data backbone: <strong>NASA POWER</strong> + aggregated regional climatology.</li>
+            <li>Focus on <strong>planning</strong> by week/month, not minute-by-minute operations.</li>
+          </ul>
+        </div>
+        <div id="tab2" class="tabcontent" role="region" aria-live="polite">
+          <ul class="hint">
+            <li>Adjust the <strong>radius</strong> if there are microclimates or complex terrain.</li>
+            <li>Cross-check with <strong>altitude</strong> and <strong>distance to the sea</strong>.</li>
+            <li>Compare <strong>analog weeks</strong> from previous years for context.</li>
+            <li>Combine temperature, wind, and precipitation; avoid deciding on a single variable.</li>
+            <li>Keep units consistent (°C/°F) and validate with local sources.</li>
+          </ul>
+        </div>
+        <div id="tab3" class="tabcontent" role="region" aria-live="polite">
+          <ul class="hint">
+            <li>Does not replace a <strong>short-term operational forecast</strong>.</li>
+            <li><strong>Extreme events</strong>: higher uncertainty and variability.</li>
+            <li><strong>Remote or mountainous areas</strong>: lower coverage and resolution.</li>
+            <li>The bars and curves show <strong>trends</strong>, not exact day/hour values.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="steps">
+        <div class="step reveal"><span class="num">1</span><h3>Choose the area</h3><p>Search a city or click on the map. Adjust the radius.</p></div>
+        <div class="step reveal"><span class="num">2</span><h3>Set the lead time</h3><p>1, 2 or 4 weeks from any date you want.</p></div>
+        <div class="step reveal"><span class="num">3</span><h3>Read the summary</h3><p>Phenomena and recommendations to decide fast.</p></div>
+      </div>
+
+      <div class="faq">
+        <details class="reveal"><summary>What data does Plani use?</summary><p>Variables from <strong>NASA POWER</strong> + climatology. The map is where the action happens.</p></details>
+        <details class="reveal"><summary>Is it useful for any activity?</summary><p>Travel, events, light logistics, and education. For safety or operations, use professional forecasts near the date.</p></details>
+      </div>
+    </section>
+
+    <!-- footer -->
+    <footer class="wrap">Powered by NASA</footer>
+  </main>
+
+  <script>
+  /* =====================  LIGHT / DARK THEME  ===================== */
+  let starColor, windColor;
+
+  // Environment config
+  const isProduction = window.location.hostname === 'plani.vercel.app';
+  const IMAGE_BASE = isProduction ? 'https://plani.vercel.app/' : '';
+
+  function setFaviconForTheme(mode){
+    const link = document.getElementById('dyn-favicon');
+    link.href = IMAGE_BASE + (mode === 'light' ? 'logo-claro.ico' : 'logo-oscuro.ico');
+  }
+
+  function applyTheme(mode){
+    document.documentElement.setAttribute('data-theme', mode);
+    // Update logo CSS var
+    document.documentElement.style.setProperty('--plani-logo', `url('${IMAGE_BASE}${mode === 'light' ? 'logo-claro.png' : 'logo-oscuro.png'}')`);
+    if(mode === 'light'){
+      starColor = '#5B7BD6';                // stars in light
+      windColor = 'rgba(39,155,255,.25)';   // winds in light
+    } else {
+      starColor = '#8AB4FF';                // stars in dark
+      windColor = 'rgba(101,244,255,.35)';  // winds in dark
+    }
+    localStorage.setItem('plani_theme', mode);
+    setFaviconForTheme(mode);               // <-- dynamic favicon
+  }
+
+  // Start with saved theme or light by default
+  const initialTheme = localStorage.getItem('plani_theme') || 'light';
+  applyTheme(initialTheme);
+
+  // === Starfield background ===
+  const starCanvas = document.getElementById('stars');
+  const sctx = starCanvas.getContext('2d');
+  let SW = starCanvas.width = innerWidth;
+  let SH = starCanvas.height = innerHeight;
+  const stars = Array.from({length:180},()=>({
+    x:Math.random()*SW, y:Math.random()*SH, r:Math.random()*1.6+.2,
+    dx:(Math.random()-.5)*.15, dy:(Math.random()-.5)*.15, tw:Math.random()*1
+  }));
+  function drawStars(){
+    sctx.clearRect(0,0,SW,SH);
+    for(const p of stars){
+      p.x+=p.dx; p.y+=p.dy; p.tw+=0.02;
+      if(p.x<0||p.x>SW) p.dx*=-1; if(p.y<0||p.y>SH) p.dy*=-1;
+      sctx.globalAlpha = .6 + Math.sin(p.tw)*.3;
+      sctx.beginPath(); sctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      sctx.fillStyle = starColor;
+      sctx.fill();
+    }
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+  addEventListener('resize',()=>{ SW=starCanvas.width=innerWidth; SH=starCanvas.height=innerHeight; });
+
+  // === Winds (animated isobars) ===
+  const windCanvas = document.getElementById('wind');
+  const wctx = windCanvas.getContext('2d');
+  let WW = windCanvas.width = innerWidth;
+  let WH = windCanvas.height = innerHeight;
+  const lines = Array.from({length:28},(_,i)=>({
+    y: (i+1)*(WH/30), phase: Math.random()*Math.PI*2, speed:.006+Math.random()*.006
+  }));
+  function drawWind(){
+    wctx.clearRect(0,0,WW,WH);
+    wctx.lineWidth = 1.2;
+    wctx.strokeStyle = windColor;
+    lines.forEach(L=>{
+      L.phase += L.speed;
+      wctx.beginPath();
+      for(let x=0;x<=WW;x+=6){
+        const y = L.y + Math.sin(x*0.01 + L.phase)*10;
+        if(x===0) wctx.moveTo(x,y); else wctx.lineTo(x,y);
+      }
+      wctx.stroke();
+    });
+    requestAnimationFrame(drawWind);
+  }
+  drawWind();
+  addEventListener('resize',()=>{ WW=windCanvas.width=innerWidth; WH=windCanvas.height=innerHeight; });
+
+  // === Simple holographic globe (canvas) ===
+  const sc = document.getElementById('sphereCanvas');
+  const scx = sc.getContext('2d');
+  function resizeSphere(){ sc.width = sc.parentElement.clientWidth; sc.height = sc.parentElement.clientHeight; }
+  resizeSphere(); addEventListener('resize', resizeSphere);
+  let t=0;
+  function drawSphere(){
+    const W=sc.width,H=sc.height; scx.clearRect(0,0,W,H);
+    const cx=W/2, cy=H/2, R=Math.min(W,H)*0.4;
+    const g=scx.createRadialGradient(cx,cy,R*0.2,cx,cy,R);
+    g.addColorStop(0,'rgba(106,91,255,.25)'); g.addColorStop(1,'rgba(106,91,255,0)');
+    scx.fillStyle=g; scx.beginPath(); scx.arc(cx,cy,R*1.15,0,Math.PI*2); scx.fill();
+    scx.fillStyle='#0b1730'; scx.strokeStyle='rgba(138,180,255,.35)'; scx.lineWidth=1.2;
+    scx.beginPath(); scx.arc(cx,cy,R,0,Math.PI*2); scx.fill(); scx.stroke();
+    scx.save(); scx.translate(cx,cy); scx.rotate(t*0.003);
+    scx.strokeStyle='rgba(96,165,250,.45)';
+    for(let i=-60;i<=60;i+=20){
+      scx.beginPath();
+      for(let a=0;a<=Math.PI*2;a+=.05){
+        const x=R*Math.cos(a);
+        const y=R*Math.sin(a)*Math.cos(i*Math.PI/180);
+        if(a===0) scx.moveTo(x,y); else scx.lineTo(x,y);
+      }
+      scx.stroke();
+    }
+    for(let i=0;i<6;i++){
+      scx.beginPath();
+      scx.ellipse(0,0,R, R*Math.sin((i+1)*Math.PI/7), 0, 0, Math.PI*2);
+      scx.stroke();
+    }
+    scx.restore();
+    t+=1; requestAnimationFrame(drawSphere);
+  }
+  drawSphere();
+
+  // === Interactions ===
+  const els=[...document.querySelectorAll('.reveal')];
+  const io=new IntersectionObserver((entries)=>{ entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('show'); }); }, {threshold:.14});
+  els.forEach(el=>io.observe(el));
+
+  const rngRadio = document.getElementById('rngRadio');
+  const rngAnt = document.getElementById('rngAnt');
+  const outRadio = document.getElementById('outRadio');
+  const outAnt = document.getElementById('outAnt');
+  const mL = document.getElementById('mLluvia');
+  const mV = document.getElementById('mViento');
+  const mR = document.getElementById('mRad');
+  const vL = document.getElementById('vLluvia');
+  const vV = document.getElementById('vViento');
+  const vR = document.getElementById('vRad');
+  function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+  function updateSim(){
+    const r = +rngRadio.value; const a = +rngAnt.value;
+    outRadio.textContent = r + ' km';
+    outAnt.textContent = a + (a===1?' week':' weeks');
+    const rain = clamp(Math.round(20 + r*0.3 - a*0.2), 5, 90);
+    const wind = clamp(Math.round(25 + a*0.8 + (r>80?10:0)), 10, 95);
+    const rad = clamp(Math.round(70 - a*0.6 - r*0.1), 5, 90);
+    mL.style.width = rain + '%'; vL.textContent = rain + '%';
+    mV.style.width = wind + '%'; vV.textContent = wind + '%';
+    mR.style.width = rad + '%'; vR.textContent = rad + '%';
+  }
+  rngRadio.addEventListener('input', updateSim);
+  rngAnt.addEventListener('input', updateSim);
+  updateSim();
+
+  const uC = document.getElementById('uC');
+  const uF = document.getElementById('uF');
+  [uC,uF].forEach(btn=>btn.addEventListener('click',()=>{
+    uC.classList.toggle('active', btn===uC);
+    uF.classList.toggle('active', btn===uF);
+  }));
+
+  const counters = document.querySelectorAll('.stat .n');
+  const io2 = new IntersectionObserver((entries,obs)=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      obs.unobserve(e.target);
+      const target = +e.target.dataset.count;
+      let cur = 0;
+      const step = Math.max(1, Math.floor(target/80));
+      const t = setInterval(()=>{
+        cur += step;
+        if(cur>=target){ cur = target; clearInterval(t); }
+        e.target.textContent = cur;
+      }, 16);
+    });
+  }, {threshold:.6});
+  counters.forEach(c=>io2.observe(c));
+
+  // Tabs
+  const tabBtns = document.querySelectorAll('.tabs button');
+  tabBtns.forEach(b=>b.addEventListener('click',()=>{
+    tabBtns.forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.tabcontent').forEach(p=>p.classList.remove('active'));
+    document.getElementById(b.dataset.tab).classList.add('active');
+  }));
+
+  // Quick access
+  addEventListener('keydown',(e)=>{ if(e.key.toLowerCase()==='m') location.href='map.html'; });
+
+  // === Theme button ===
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light');
+  });
+  </script>
+</body>
+</html>
